@@ -1,13 +1,13 @@
-name: Build and Push Docker Image  # CI/CD Workflow
+name: Build and Push Docker Image
 
 on:
   push:
     branches:
-      - main  # Runs when changes are pushed to main
+      - main  # Runs on main branch updates
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest  # Ubuntu virtual machine
+    runs-on: ubuntu-latest  # Ubuntu VM
 
     steps:
       - name: Checkout repository
@@ -22,10 +22,11 @@ jobs:
       - name: Get Latest Version & Increment
         id: versioning
         run: |
-          latest_version=$(git tag --sort=-v:refname | head -n 1 || echo "1.0.0")
-          major=$(echo $latest_version | cut -d. -f1)
-          minor=$(echo $latest_version | cut -d. -f2)
-          patch=$(echo $latest_version | cut -d. -f3)
+          latest_version=$(git tag --sort=-v:refname | head -n 1 | tr -d '[:space:]')
+          if [[ -z "$latest_version" ]]; then
+            latest_version="2.0.0"
+          fi
+          IFS='.' read -r major minor patch <<< "$latest_version"
           new_patch=$((patch + 1))
           new_version="$major.$minor.$new_patch"
           echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
