@@ -1,0 +1,13 @@
+# Ignore environment files
+.env
+DB.db
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# Ignore local files and directories
+logfile/
+order_data/
+database/
+*.log
