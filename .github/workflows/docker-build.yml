@@ -35,12 +35,15 @@ jobs:
       - name: Build Docker Image
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/account-tracker:$NEW_VERSION .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/account-tracker:latest .
 
       - name: Push Docker Image to Docker Hub
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/account-tracker:$NEW_VERSION
+          docker push ${{ secrets.DOCKER_USERNAME }}/account-tracker:latest
 
-      - name: Create Git Tag for New Version
-        run: |
-          git tag $NEW_VERSION
-          git push origin $NEW_VERSION
+      # look into this in the future for automated version updates
+      # - name: Create Git Tag for New Version
+      #   run: |
+      #     git tag $NEW_VERSION
+      #     git push origin $NEW_VERSION
