@@ -34,11 +34,11 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t your-dockerhub-username/your-image-name:$NEW_VERSION .
+          docker build -t your-dockerhub-username/account-tracker:$NEW_VERSION .
 
       - name: Push Docker Image to Docker Hub
         run: |
-          docker push your-dockerhub-username/your-image-name:$NEW_VERSION
+          docker push your-dockerhub-username/account-tracker:$NEW_VERSION
 
       - name: Create Git Tag for New Version
         run: |
