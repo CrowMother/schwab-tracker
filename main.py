@@ -24,6 +24,8 @@ MESSAGE_TEMPLATE_CLOSING = bot.util.get_secret("MESSAGE_TEMPLATE_CLOSING", "conf
 
 DROP_TABLES = bool(bot.util.get_secret("DROP_TABLES", "config/.env"))
 
+SEND_TO_URL = bool(bot.util.get_secret("SEND_TO_URL", "config/.env"))
+
 
 def format_webhook(order):
     """
@@ -302,21 +304,24 @@ def loop_work(client, sql):
             closed_orders = process_closing_orders(sql, new_orders)
             logging.info(f"Closed Orders: {closed_orders}")
 
-            # Send orders to webhook
-            for order in new_orders:
-                # Check if the order is a closing order
-                if order['instruction'] in ["SELL_TO_CLOSE", "BUY_TO_CLOSE"]:
-                    # Match the closing order with its corresponding closed position
-                    matching_closing_orders = [
-                        closed_order for closed_order in closed_orders
-                        if closed_order['instrumentId'] == order['instrumentId']
-                    ]
-                    # Send the matched closing data to the webhook
-                    for closed_order in matching_closing_orders:
-                        send_to_webhook(closed_order)
-                else:
-                    # Send new order directly to the webhook
-                    send_to_webhook(order)
+            #debugging option to send orders to webhook or prevent sending
+            if SEND_TO_URL == True:
+
+                # Send orders to webhook
+                for order in new_orders:
+                    # Check if the order is a closing order
+                    if order['instruction'] in ["SELL_TO_CLOSE", "BUY_TO_CLOSE"]:
+                        # Match the closing order with its corresponding closed position
+                        matching_closing_orders = [
+                            closed_order for closed_order in closed_orders
+                            if closed_order['instrumentId'] == order['instrumentId']
+                        ]
+                        # Send the matched closing data to the webhook
+                        for closed_order in matching_closing_orders:
+                            send_to_webhook(closed_order)
+                    else:
+                        # Send new order directly to the webhook
+                        send_to_webhook(order)
 
     except Exception as e:
         logging.error(f"Error in loop_work: {e}")
