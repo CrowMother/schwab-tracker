@@ -26,7 +26,7 @@ DROP_TABLES = bool(bot.util.get_secret("DROP_TABLES", "config/.env"))
 
 SEND_TO_URL = bool(bot.util.get_secret("SEND_TO_URL", "config/.env"))
 
-
+OUTPUT_PATH = bot.util.get_secret("OUTPUT_PATH", "config/.env")
 
 def loop(client, sql, interval=LOOP_FREQUENCY):
     """
@@ -77,42 +77,50 @@ def loop_work(client, sql):
         # Filter new orders
         new_orders = [order for order in orders if order.get('executionTime') not in existing_order_executionTime]
         logging.debug(f"New orders: {len(new_orders)}")
+        
+        if not new_orders:
+            return None
+        
+        # Save new orders to the database
+        bot.schwab.save_orders_to_db(sql, new_orders)
 
-        if new_orders:
-            # Save new orders to the database
-            bot.schwab.save_orders_to_db(sql, new_orders)
+        # Populate open positions
+        bot.schwab.populate_open_positions(sql, new_orders)
 
-            # Populate open positions
-            bot.schwab.populate_open_positions(sql, new_orders)
+        # Process closing orders
+        closed_orders = bot.schwab.process_closing_orders(sql, new_orders)
+        logging.info(f"Closed Orders: {len(closed_orders)}")
 
-            # Process closing orders
-            closed_orders = bot.schwab.process_closing_orders(sql, new_orders)
-            logging.info(f"Closed Orders: {len(closed_orders)}")
-
-            #debugging option to send orders to webhook or prevent sending
-            if SEND_TO_URL == True:
-
-                # Send orders to webhook
-                for order in new_orders:
-                    # Check if the order is a closing order
-                    if order['instruction'] in ["SELL_TO_CLOSE", "BUY_TO_CLOSE"]:
-                        # Match the closing order with its corresponding closed position
-                        matching_closing_orders = [
-                            closed_order for closed_order in closed_orders
-                            if closed_order['instrumentId'] == order['instrumentId']
-                        ]
-                        # Send the matched closing data to the webhook
-                        for closed_order in matching_closing_orders:
-                            message = bot.webhook.format_webhook(closed_order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
-                            bot.webhook.send_to_discord_webhook(message, WEBHOOK_URL)
-                    else:
-                        # Send new order directly to the webhook
-                        message = bot.webhook.format_webhook(order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
-                        bot.webhook.send_to_discord_webhook(message, WEBHOOK_URL)
+        #debugging option to send orders to webhook or prevent sending
+        if OUTPUT_PATH == "DISCORD":
+            send_to_discord_webhook(MESSAGE_TEMPLATE_OPENING, new_orders, closed_orders)
+            
+        elif OUTPUT_PATH == "GSHEET":
+            pass
 
     except Exception as e:
         logging.error(f"Error in loop_work: {e}")
         return e
+
+def send_to_discord_webhook(message, new_orders, closed_orders):
+    # Send orders to webhook
+        for order in new_orders:
+            # Check if the order is a closing order
+            if order['instruction'] in ["SELL_TO_CLOSE", "BUY_TO_CLOSE"]:
+                # Match the closing order with its corresponding closed position
+                matching_closing_orders = [
+                    closed_order for closed_order in closed_orders
+                    if closed_order['instrumentId'] == order['instrumentId']
+                ]
+
+                # Send the matched closing data to the webhook
+                for closed_order in matching_closing_orders:
+                    message = bot.webhook.format_webhook(closed_order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
+                    bot.webhook.send_to_discord_webhook(message, WEBHOOK_URL)
+            else:
+                # Send new order directly to the webhook
+                message = bot.webhook.format_webhook(order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
+                bot.webhook.send_to_discord_webhook(message, WEBHOOK_URL)
 
 
 def main():
