@@ -132,7 +132,7 @@ def save_orders_to_db(sql, orders):
         return
 
     for order in orders:
-        logging.debug(f"Saving order to database: {order}")  # Debugging log
+        logging.debug(f"Saving order to database...")  # Debugging log
         query = """
         INSERT INTO orders (
             order_id, symbol, quantity, description, putCall, date, strike, price, instruction,
@@ -258,7 +258,9 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
     while True:
         error = loop_work(client, sql)
         if error:
+            logging.error("Error occurred in loop_work, exiting loop")
             break
+        logging.info("Loop iteration completed, sleeping for {} seconds".format(interval))
         time.sleep(interval)
 
 
@@ -282,16 +284,15 @@ def loop_work(client, sql):
         response = client.get_account_positions(FILTER, TIME_DELTA)
         orders = [bot.sort_data_schwab(position) for position in response]
 
-        logging.debug(f"Orders fetched: {orders}")
+        logging.debug(f"Orders fetched: {len(orders)}")
 
         # Fetch existing execution times from the database
         existing_order_rows = sql.get_data("SELECT executionTime FROM orders")
         existing_order_executionTime = [row[0] for row in existing_order_rows]  # Extract execution times
-        logging.debug(f"Existing order execution times: {existing_order_executionTime}")
 
         # Filter new orders
         new_orders = [order for order in orders if order.get('executionTime') not in existing_order_executionTime]
-        logging.debug(f"New orders: {new_orders}")
+        logging.debug(f"New orders: {len(new_orders)}")
 
         if new_orders:
             # Save new orders to the database
@@ -302,7 +303,7 @@ def loop_work(client, sql):
 
             # Process closing orders
             closed_orders = process_closing_orders(sql, new_orders)
-            logging.info(f"Closed Orders: {closed_orders}")
+            logging.info(f"Closed Orders: {len(closed_orders)}")
 
             #debugging option to send orders to webhook or prevent sending
             if SEND_TO_URL == True:
