@@ -105,8 +105,10 @@ def loop_work(client, sql):
 def send_to_gsheet(orders, closed_orders):
 
     #connect to google sheets
-    #look into the following line -------------------------------------------
-    bot.gsheet.connect_gsheets_account(bot.util.get_secret("GSHEETS_CREDENTIALS", "config/.env"))
+    #look into the following lines of code -------------------------------------------
+    gsheet_client = bot.gsheet.connect_gsheets_account(bot.util.get_secret("GSHEETS_CREDENTIALS", "config/.env"))
+    gsheet = bot.gsheet.connect_to_sheet(gsheet_client, bot.util.get_secret("GSHEETS_SHEET_ID", "config/.env"))
+
 
     # Send the closed order to the GSheet
     for order in orders:
@@ -116,6 +118,8 @@ def send_to_gsheet(orders, closed_orders):
                 # for each closing order add it to the gsheet
                 for closed_order in matching_closing_orders:
                     row_data = bot.gsheet.format_data(closed_order)
+                    bot.gsheet.write_row_at_next_empty_row(gsheet, row_data)
+
 
     pass
 
