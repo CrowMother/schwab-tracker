@@ -28,6 +28,8 @@ SEND_TO_URL = bool(bot.util.get_secret("SEND_TO_URL", "config/.env"))
 
 OUTPUT_PATH = bot.util.get_secret("OUTPUT_PATH", "config/.env")
 
+LOOP_TYPE = bot.util.get_secret("LOOP_TYPE", "config/.env")
+
 def loop(client, sql, interval=LOOP_FREQUENCY):
     """
     Continuously runs loop_work at the specified interval.
@@ -39,13 +41,29 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
 
     Note: This function will run indefinitely until the program is terminated.
     """
-    while True:
-        error = loop_work(client, sql)
-        if error:
-            logging.error("Error occurred in loop_work, exiting loop")
-            break
-        logging.info("Loop iteration completed, sleeping for {} seconds".format(interval))
-        time.sleep(interval)
+    
+    # Run loop_work on specified time of the week
+    # Timer for running loop_work on a specified time of the week
+    if LOOP_TYPE == "WEEKLY":
+        while True:
+            # 4 = friday 16:00 EST 0 minutes (friday 4:00pm EST)
+            if bot.util.check_time_of_week(4, 16, 0):
+                logging.info("start to create reports")
+                error = loop_work(client, sql)
+            time.sleep(interval)
+        
+
+    if LOOP_TYPE == "INTERVAL":
+        # Simple Timer Loop
+        while True:
+            error = loop_work(client, sql)
+            if error:
+                logging.error("Error occurred in loop_work, exiting loop")
+                break
+            logging.info("Loop iteration completed, sleeping for {} seconds".format(interval))
+            time.sleep(interval)
+    else:
+        raise ValueError("Unknown loop type: {}".format(LOOP_TYPE))
 
 
 def loop_work(client, sql):
