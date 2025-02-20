@@ -32,14 +32,25 @@ LOOP_TYPE = bot.util.get_secret("LOOP_TYPE", "config/.env")
 
 def loop(client, sql, interval=LOOP_FREQUENCY):
     """
-    Continuously runs loop_work at the specified interval.
+    Executes a continuous loop to process orders at specified intervals.
+
+    Depending on the `LOOP_TYPE`, the function either runs `loop_work` on a 
+    weekly schedule (every Friday at 4:00 PM EST) or at regular intervals 
+    specified by `interval`.
 
     Args:
-        client: schwab client to use
-        sql: SQL database to use
-        interval: time in seconds to wait between loop iterations (default: 5)
+        client: The Schwab client to retrieve account positions from.
+        sql: The SQL database instance to update with order data.
+        interval (int, optional): The time interval in seconds for running `loop_work` 
+                                  when `LOOP_TYPE` is "INTERVAL". Defaults to `LOOP_FREQUENCY`.
 
-    Note: This function will run indefinitely until the program is terminated.
+    Raises:
+        ValueError: If `LOOP_TYPE` is neither "WEEKLY" nor "INTERVAL".
+
+    Workflow:
+        - If `LOOP_TYPE` is "WEEKLY", waits until the specified day and time to run `loop_work`.
+        - If `LOOP_TYPE` is "INTERVAL", runs `loop_work` continuously with a sleep interval.
+        - Logs errors and loop completion messages.
     """
     
     # Run loop_work on specified time of the week
