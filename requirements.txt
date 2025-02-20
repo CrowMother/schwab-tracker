@@ -1,2 +1,6 @@
 git+https://github.com/CrowMother/Bot_framework.git
 requests
+gspread
+google
+pandas
+schwabdev

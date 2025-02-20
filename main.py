@@ -77,7 +77,7 @@ def loop_work(client, sql):
         # Filter new orders
         new_orders = [order for order in orders if order.get('executionTime') not in existing_order_executionTime]
         logging.debug(f"New orders: {len(new_orders)}")
-        
+
         if not new_orders:
             return None
         
@@ -96,23 +96,47 @@ def loop_work(client, sql):
             send_to_discord_webhook(MESSAGE_TEMPLATE_OPENING, new_orders, closed_orders)
             
         elif OUTPUT_PATH == "GSHEET":
-            pass
+            send_to_gsheet(new_orders, closed_orders)
 
     except Exception as e:
         logging.error(f"Error in loop_work: {e}")
         return e
 
+def send_to_gsheet(orders, closed_orders):
+
+    #connect to google sheets
+    #look into the following line -------------------------------------------
+    bot.gsheet.connect_gsheets_account(bot.util.get_secret("GSHEETS_CREDENTIALS", "config/.env"))
+
+    # Send the closed order to the GSheet
+    for order in orders:
+            if order['instruction'] in ["SELL_TO_CLOSE", "BUY_TO_CLOSE"]:
+                # Check if the order is a closing order
+                matching_closing_orders = match_orders(order, closed_orders)
+                # for each closing order add it to the gsheet
+                for closed_order in matching_closing_orders:
+                    row_data = bot.gsheet.format_data(closed_order)
+
+    pass
+
+
+def match_orders(order, closed_orders):
+        # Match the closing order with its corresponding closed position
+        matching_closing_orders = [
+            closed_order for closed_order in closed_orders
+            if closed_order['instrumentId'] == order['instrumentId']
+                ]
+        return matching_closing_orders
+
 def send_to_discord_webhook(message, new_orders, closed_orders):
     # Send orders to webhook
-        for order in new_orders:
-            # Check if the order is a closing order
-            if order['instruction'] in ["SELL_TO_CLOSE", "BUY_TO_CLOSE"]:
-                # Match the closing order with its corresponding closed position
-                matching_closing_orders = [
-                    closed_order for closed_order in closed_orders
-                    if closed_order['instrumentId'] == order['instrumentId']
-                ]
 
+    # -------------look into refactoring this section of code-------------
+    try:
+        for order in new_orders:
+            if order['instruction'] in ["SELL_TO_CLOSE", "BUY_TO_CLOSE"]:
+                # Check if the order is a closing order
+                matching_closing_orders = match_orders(order, closed_orders)
                 # Send the matched closing data to the webhook
                 for closed_order in matching_closing_orders:
                     message = bot.webhook.format_webhook(closed_order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
@@ -121,6 +145,11 @@ def send_to_discord_webhook(message, new_orders, closed_orders):
                 # Send new order directly to the webhook
                 message = bot.webhook.format_webhook(order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
                 bot.webhook.send_to_discord_webhook(message, WEBHOOK_URL)
+
+    # ^^^^^^^^^^^^^look into refactoring this section of code^^^^^^^^^^^^^^
+
+    except Exception as e:
+        logging.error(f"Error sending data to discord webhook: {str(e)}")
 
 
 def main():
