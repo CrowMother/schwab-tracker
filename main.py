@@ -60,10 +60,11 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
         global ISREPORTGEN
         while True:
             # 4 = friday 16:00 EST (friday 4:00pm EST)
-            if bot.util.check_time_of_week(4, 16):
-                ISREPORTGEN = True
-                logging.info("start to create reports")
-                error = loop_work(client, sql)
+            if bot.util.check_time_of_week(4, 11):
+                if not ISREPORTGEN:
+                    logging.info("start to create reports")
+                    error = loop_work(client, sql)
+                    ISREPORTGEN = True
             else:
                 ISREPORTGEN = False
             time.sleep(interval)
@@ -143,6 +144,12 @@ def send_to_gsheet(orders, closed_orders):
     gsheet_client = bot.gsheet.connect_gsheets_account(bot.util.get_secret("GSHEETS_CREDENTIALS", "config/.env"))
     gsheet = bot.gsheet.connect_to_sheet(gsheet_client, bot.util.get_secret("GSHEETS_SHEET_ID", "config/.env"), bot.util.get_secret("GSHEETS_SHEET_NAME", "config/.env"))
 
+
+    #insert header row
+    bot.gsheet.copy_headers(gsheet, f"A{bot.gsheet.get_next_empty_row(gsheet, 2)}")
+    week = bot.util.get_monday_of_current_week()
+    logging.info(f"week: {week}")
+    bot.gsheet.insert_data(gsheet, f"A{bot.gsheet.get_next_empty_row(gsheet, 2)}", [[week]])
 
     # Send the closed order to the GSheet
     for order in orders:
