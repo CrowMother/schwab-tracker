@@ -7,29 +7,40 @@ import time
 import Bot_App as bot
 
 # Constants
+# for report generation prevent multiple reports off one loop
 ISREPORTGEN = False
+
+#BOT CONFIG
+OUTPUT_PATH = bot.util.get_secret("OUTPUT_PATH", "config/.env")
+
+
+#SCHWAB CONFIG
 BROKER = bot.util.get_secret("BROKER", "config/.env")
 FILTER = "FILLED"
 
+#DISCORD CONFIG
 WEBHOOK_URL = bot.util.get_secret("WEBHOOK_URL", "config/.env")
 WEBHOOK_EXTENSION = bot.util.get_secret("WEBHOOK_EXTENSION", "config/.env")
 DISCORD_CHANNEL_ID = bot.util.get_secret("DISCORD_CHANNEL_ID", "config/.env")
-
-DATABASE_PATH = bot.util.get_secret("DATABASE_PATH", "config/.env")
-
-LOOP_FREQUENCY = int(bot.util.get_secret("LOOP_FREQUENCY", "config/.env"))
-TIME_DELTA = int(bot.util.get_secret("TIME_DELTA", "config/.env"))
-
 MESSAGE_TEMPLATE_OPENING = bot.util.get_secret("MESSAGE_TEMPLATE_OPENING", "config/.env")
 MESSAGE_TEMPLATE_CLOSING = bot.util.get_secret("MESSAGE_TEMPLATE_CLOSING", "config/.env")
 
+
+#DATABASE CONFIG
+DATABASE_PATH = bot.util.get_secret("DATABASE_PATH", "config/.env")
+
+#LOOP CONFIG
+LOOP_FREQUENCY = int(bot.util.get_secret("LOOP_FREQUENCY", "config/.env", default=60))
+TIME_DELTA = int(bot.util.get_secret("TIME_DELTA", "config/.env"), default=168)
+LOOP_TYPE = bot.util.get_secret("LOOP_TYPE", "config/.env")
+DAY_OF_WEEK = bot.util.get_secret("DAY_OF_WEEK", "config/.env")
+HOUR_OF_DAY = bot.util.get_secret("HOUR_OF_DAY", "config/.env")
+
+#DEBUG CONFIG
 DROP_TABLES = bool(bot.util.get_secret("DROP_TABLES", "config/.env"))
 
-SEND_TO_URL = bool(bot.util.get_secret("SEND_TO_URL", "config/.env"))
 
-OUTPUT_PATH = bot.util.get_secret("OUTPUT_PATH", "config/.env")
 
-LOOP_TYPE = bot.util.get_secret("LOOP_TYPE", "config/.env")
 
 def loop(client, sql, interval=LOOP_FREQUENCY):
     """
@@ -60,7 +71,7 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
         global ISREPORTGEN
         while True:
             # 4 = friday 16:00 EST (friday 4:00pm EST)
-            if bot.util.check_time_of_week(4, 11):
+            if bot.util.check_time_of_week(DAY_OF_WEEK, HOUR_OF_DAY):
                 if not ISREPORTGEN:
                     logging.info("start to create reports")
                     error = loop_work(client, sql)
