@@ -7,6 +7,7 @@ import time
 import Bot_App as bot
 
 # Constants
+ISREPORTGEN = False
 BROKER = bot.util.get_secret("BROKER", "config/.env")
 FILTER = "FILLED"
 
@@ -52,15 +53,19 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
         - If `LOOP_TYPE` is "INTERVAL", runs `loop_work` continuously with a sleep interval.
         - Logs errors and loop completion messages.
     """
-    
+
     # Run loop_work on specified time of the week
     # Timer for running loop_work on a specified time of the week
     if LOOP_TYPE == "WEEKLY":
+        global ISREPORTGEN
         while True:
-            # 4 = friday 16:00 EST 0 minutes (friday 4:00pm EST)
-            if bot.util.check_time_of_week(4, 16, 0):
+            # 4 = friday 16:00 EST (friday 4:00pm EST)
+            if bot.util.check_time_of_week(4, 16):
+                ISREPORTGEN = True
                 logging.info("start to create reports")
                 error = loop_work(client, sql)
+            else:
+                ISREPORTGEN = False
             time.sleep(interval)
         
 
@@ -136,7 +141,7 @@ def send_to_gsheet(orders, closed_orders):
     #connect to google sheets
     #look into the following lines of code -------------------------------------------
     gsheet_client = bot.gsheet.connect_gsheets_account(bot.util.get_secret("GSHEETS_CREDENTIALS", "config/.env"))
-    gsheet = bot.gsheet.connect_to_sheet(gsheet_client, bot.util.get_secret("GSHEETS_SHEET_ID", "config/.env"))
+    gsheet = bot.gsheet.connect_to_sheet(gsheet_client, bot.util.get_secret("GSHEETS_SHEET_ID", "config/.env"), bot.util.get_secret("GSHEETS_SHEET_NAME", "config/.env"))
 
 
     # Send the closed order to the GSheet
