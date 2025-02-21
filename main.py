@@ -33,8 +33,9 @@ DATABASE_PATH = bot.util.get_secret("DATABASE_PATH", "config/.env")
 LOOP_FREQUENCY = int(bot.util.get_secret("LOOP_FREQUENCY", "config/.env", 60))
 TIME_DELTA = int(bot.util.get_secret("TIME_DELTA", "config/.env", 168))
 LOOP_TYPE = bot.util.get_secret("LOOP_TYPE", "config/.env")
-DAY_OF_WEEK = int(bot.util.get_secret("DAY_OF_WEEK", "config/.env"))
-HOUR_OF_DAY = int(bot.util.get_secret("HOUR_OF_DAY", "config/.env"))
+
+DAY_OF_WEEK = int(bot.util.get_secret("DAY_OF_WEEK", "config/.env", 4))
+HOUR_OF_DAY = int(bot.util.get_secret("HOUR_OF_DAY", "config/.env", 16))
 
 #DEBUG CONFIG
 DROP_TABLES = bool(bot.util.get_secret("DROP_TABLES", "config/.env"))
