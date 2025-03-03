@@ -89,8 +89,14 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
             if error:
                 logging.error("Error occurred in loop_work, exiting loop")
                 break
-            logging.info("Loop iteration completed, sleeping for {} seconds".format(interval))
+            logging.info(f"Loop iteration completed, sleeping for {interval} seconds")
             time.sleep(interval)
+
+    if LOOP_TYPE == "DEBUG":
+        error = loop_work(client, sql)
+        if error:
+            logging.error(f"Error occurred in loop_work, ERROR: {error}")
+            return
     else:
         raise ValueError("Unknown loop type: {}".format(LOOP_TYPE))
 
