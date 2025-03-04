@@ -89,8 +89,14 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
             if error:
                 logging.error("Error occurred in loop_work, exiting loop")
                 break
-            logging.info("Loop iteration completed, sleeping for {} seconds".format(interval))
+            logging.info(f"Loop iteration completed, sleeping for {interval} seconds")
             time.sleep(interval)
+
+    if LOOP_TYPE == "DEBUG":
+        error = loop_work(client, sql)
+        if error:
+            logging.error(f"Error occurred in loop_work, ERROR: {error}")
+            return
     else:
         raise ValueError("Unknown loop type: {}".format(LOOP_TYPE))
 
@@ -150,31 +156,44 @@ def loop_work(client, sql):
         return e
 
 def send_to_gsheet(orders, closed_orders):
-
-    #connect to google sheets
-    #look into the following lines of code -------------------------------------------
-    gsheet_client = bot.gsheet.connect_gsheets_account(bot.util.get_secret("GSHEETS_CREDENTIALS", "config/.env"))
-    gsheet = bot.gsheet.connect_to_sheet(gsheet_client, bot.util.get_secret("GSHEETS_SHEET_ID", "config/.env"), bot.util.get_secret("GSHEETS_SHEET_NAME", "config/.env"))
-
-
-    #insert header row
-    bot.gsheet.copy_headers(gsheet, f"A{bot.gsheet.get_next_empty_row(gsheet, 2)}")
-    week = bot.util.get_monday_of_current_week()
-    logging.info(f"week: {week}")
-    bot.gsheet.insert_data(gsheet, f"A{bot.gsheet.get_next_empty_row(gsheet, 2)}", [[week]])
-
-    # Send the closed order to the GSheet
-    for order in orders:
-            if order['instruction'] in ["SELL_TO_CLOSE", "BUY_TO_CLOSE"]:
-                # Check if the order is a closing order
-                matching_closing_orders = match_orders(order, closed_orders)
-                # for each closing order add it to the gsheet
-                for closed_order in matching_closing_orders:
-                    row_data = bot.gsheet.format_data(closed_order)
-                    bot.gsheet.write_row_at_next_empty_row(gsheet, row_data)
+    try:
+        #connect to google sheets
+        #look into the following lines of code -------------------------------------------
+        gsheet_client = bot.gsheet.connect_gsheets_account(bot.util.get_secret("GSHEETS_CREDENTIALS", "config/.env"))
+        gsheet = bot.gsheet.connect_to_sheet(gsheet_client, bot.util.get_secret("GSHEETS_SHEET_ID", "config/.env"), bot.util.get_secret("GSHEETS_SHEET_NAME", "config/.env"))
 
 
-    pass
+        #insert header row
+        bot.gsheet.copy_headers(gsheet, f"A{bot.gsheet.get_next_empty_row(gsheet, 2)}")
+        week = bot.util.get_monday_of_current_week()
+        logging.info(f"week: {week}")
+        bot.gsheet.insert_data(gsheet, f"A{bot.gsheet.get_next_empty_row(gsheet, 2)}", [[week]])
+
+        matching_closing_orders = []
+        # Send the closed order to the GSheet
+        for order in orders:
+                if order['instruction'] in ["SELL_TO_CLOSE", "BUY_TO_CLOSE"]:
+                    # Check if the order is a closing order
+                    matching_closing_orders.append(match_orders(order, closed_orders))
+
+        #IDs of the orders that have already been posted
+        posted_IDs = []
+        # for each closing order add it to the gsheet
+        for closed_order in matching_closing_orders:
+            row_data = bot.gsheet.format_data(closed_order[0])
+
+            #create an ID for the order
+            order_id = bot.gsheet.create_id(closed_order[0])
+            
+            #check if ID has already been posted
+            if order_id not in posted_IDs:
+                posted_IDs.append(order_id)
+                bot.gsheet.write_row_at_next_empty_row(gsheet, row_data)
+            else:
+                logging.debug(f"Order with ID {order_id} already posted, skipping")
+
+    except Exception as e:
+        logging.error(f"Error sending data to google sheets: {str(e)}")
 
 
 def match_orders(order, closed_orders):
