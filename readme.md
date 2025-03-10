@@ -1,54 +1,108 @@
+
 # Schwab Tracker
 
-## Overview
-This application tracks Schwab account positions and processes them using a structured workflow. It leverages `main.py` for order processing, database management, and webhook notifications.
+A Python application designed to monitor and manage Charles Schwab account positions, facilitating order processing and providing webhook notifications.
 
-## Dependencies
-- Python 3.8 or higher  
-- `Bot_App` library (assumed installed)  
-- `requests` library  
-- `logging` module  
+## Features
 
-## Components
+- **Order Processing**: Automates the execution of buy and sell orders based on predefined criteria.
+- **Database Management**: Utilizes SQLite to store order history and track open positions.
+- **Webhook Notifications**: Sends real-time updates on order statuses and account changes.
 
-### Main Processing (`main.py`)
-Handles the core logic of fetching Schwab account positions, managing orders, and interacting with the database.
+## Requirements
 
-### Database Operations
-Manages connections to a SQLite database for storing order history and tracking open positions.
+- Python 3.8 or higher
+- `requests` library
+- `logging` module
+- `Bot_App` library (ensure this is installed or accessible)
 
-## Workflow
+## Installation
 
-1. **Initialization**  
-   - Sets up logging.  
-   - Initializes database connection.  
-   - Creates tables if they don’t exist.  
+1. **Clone the Repository**:
 
-2. **Schwab Client Setup**  
-   - Uses environment variables for authentication credentials.  
-   - Connects to Schwab API to fetch account positions.  
+   ```bash
+   git clone https://github.com/CrowMother/schwab-tracker.git
+   ```
 
-3. **Data Processing**  
-   - Fetches account positions filtered by "FILLED".  
-   - Converts raw data into structured order dictionaries.  
-   - Filters out duplicate orders already stored in the database.  
 
-4. **Database Operations**  
-   - Stores new orders in the `orders` table.  
-   - Maintains the `open_positions` table for tracking active trades.  
-   - Processes closing orders and matches them with corresponding open positions.  
+2. **Navigate to the Project Directory**:
 
-5. **Webhook Notifications**  
-   - Sends structured messages to a webhook (e.g., Discord) when new or closed orders are processed.  
+   ```bash
+   cd schwab-tracker
+   ```
 
-6. **Loop Execution**  
-   - Runs at defined intervals (`LOOP_FREQUENCY`) to continuously fetch and process orders.  
+
+3. **Install Dependencies**:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
 
 ## Configuration
-- Uses environment variables stored in `config/.env` for sensitive information such as API keys and webhook URLs.  
 
-## Running Terminals
-None  
+1. **Environment Variables**:
 
-## Connected MCP Servers
-None currently connected  
+   Set the following environment variables for Schwab API authentication:
+
+   - `SCHWAB_USERNAME`
+   - `SCHWAB_PASSWORD`
+   - `SCHWAB_TOTP_SECRET`
+
+   These can be set in a `.env` file or directly in your environment.
+
+2. **Database Setup**:
+
+   The application uses an SQLite database (`DB.db`) to store order history and track positions. Ensure this file is accessible and has the appropriate read/write permissions.
+
+## Usage
+
+1. **Run the Application**:
+
+   ```bash
+   python main.py
+   ```
+
+
+   This will initiate the process of fetching account positions, processing orders, and sending webhook notifications as configured.
+
+2. **Logging**:
+
+   Logs are generated to provide insights into the application's operations. Ensure that the logging configuration in `main.py` is set up according to your preferences.
+
+## Docker Deployment
+
+1. **Build the Docker Image**:
+
+   ```bash
+   docker build -t schwab-tracker .
+   ```
+
+
+2. **Run the Docker Container**:
+
+   ```bash
+   docker run -d --name schwab-tracker schwab-tracker
+   ```
+
+
+   Ensure that environment variables are passed correctly and that the database file is mounted appropriately if you need persistent storage.
+
+## Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository.
+2. Create a new branch (`feature-branch`).
+3. Commit your changes.
+4. Push to the branch.
+5. Open a Pull Request.
+
+## License
+
+This project is licensed under the MIT License.
+
+## Contact
+
+For questions or suggestions, please open an issue in this repository.
+``` 
