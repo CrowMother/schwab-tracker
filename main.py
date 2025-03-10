@@ -128,6 +128,7 @@ def loop_work(client, sql):
         5. Sends new and closed orders to the webhook.
     """
     try:
+        logging.debug(f"Passed client: {client} and sql: {sql}")
         # Fetch orders from Schwab
         response = client.get_account_positions(FILTER, TIME_DELTA)
         orders = [bot.sort_data_schwab(position) for position in response]
