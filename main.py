@@ -80,8 +80,19 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
             else:
                 ISREPORTGEN = False
             time.sleep(interval)
+    
+    # Run loop_work on specified time of each day
+    if LOOP_TYPE == "DAILY":
+        while True:
+            if bot.util.check_time_of_day(HOUR_OF_DAY):
+                if not ISREPORTGEN:
+                    logging.info("start to create reports")
+                    error = loop_work(client, sql)
+                    ISREPORTGEN = True
+            else:
+                ISREPORTGEN = False
+            time.sleep(interval)
         
-
     if LOOP_TYPE == "INTERVAL":
         # Simple Timer Loop
         while True:
