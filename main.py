@@ -82,7 +82,7 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
             time.sleep(interval)
     
     # Run loop_work on specified time of each day
-    if LOOP_TYPE == "DAILY":
+    elif LOOP_TYPE == "DAILY":
         while True:
             if bot.util.check_time_of_day(HOUR_OF_DAY):
                 if not ISREPORTGEN:
@@ -93,7 +93,7 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
                 ISREPORTGEN = False
             time.sleep(interval)
         
-    if LOOP_TYPE == "INTERVAL":
+    elif LOOP_TYPE == "INTERVAL":
         # Simple Timer Loop
         while True:
             error = loop_work(client, sql)
@@ -103,7 +103,7 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
             logging.info(f"Loop iteration completed, sleeping for {interval} seconds")
             time.sleep(interval)
 
-    if LOOP_TYPE == "DEBUG":
+    elif LOOP_TYPE == "DEBUG":
         error = loop_work(client, sql)
         if error:
             logging.error(f"Error occurred in loop_work, ERROR: {error}")
@@ -244,17 +244,21 @@ def main():
     # Initialize logging
     logging.basicConfig(level=logging.INFO)
     
+    try:
+        # Initialize database
+        sql = bot.SQLDatabase(DATABASE_PATH)
+        sql.connect()
+        bot.schwab.initialize_database(sql, DROP_TABLES)
 
-    # Initialize database
-    sql = bot.SQLDatabase(DATABASE_PATH)
-    sql.connect()
-    bot.schwab.initialize_database(sql, DROP_TABLES)
+        # Initialize Schwab client
+        client = bot.Schwab_client(
+            bot.util.get_secret("SCHWAB_APP_KEY", "config/.env"),
+            bot.util.get_secret("SCHWAB_APP_SECRET", "config/.env")
+        )
 
-    # Initialize Schwab client
-    client = bot.Schwab_client(
-        bot.util.get_secret("SCHWAB_APP_KEY", "config/.env"),
-        bot.util.get_secret("SCHWAB_APP_SECRET", "config/.env")
-    )
+    except Exception as e:
+        logging.error(f"Error in main: {e}")
+        return
 
     # Start the main loop
     loop(client, sql)
