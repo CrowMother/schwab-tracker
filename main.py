@@ -98,7 +98,6 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
         while True:
             error = loop_work(client, sql)
             if error:
-                logging.error("Error occurred in loop_work, exiting loop")
                 break
             logging.info(f"Loop iteration completed, sleeping for {interval} seconds")
             time.sleep(interval)
