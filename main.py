@@ -130,9 +130,12 @@ def loop_work(client, sql):
         logging.debug(f"Passed client: {client} and sql: {sql}")
         # Fetch orders from Schwab
         response = client.get_account_positions(FILTER, TIME_DELTA)
-        orders = [bot.sort_data_schwab(position) for position in response]
+        orders = [bot.sort_schwab_data_dynamically(bot.get_keys(), position) for position in response]
 
         logging.debug(f"Orders fetched: {len(orders)}")
+
+        #check each order if there is multiple legs in the order and split them up
+        # orders = bot.split_orders(orders)
 
         # Fetch existing execution times from the database
         existing_order_rows = sql.get_data("SELECT executionTime FROM orders")
