@@ -13,7 +13,6 @@ ISREPORTGEN = False
 #BOT CONFIG
 OUTPUT_PATH = bot.util.get_secret("OUTPUT_PATH", "config/.env")
 
-
 #SCHWAB CONFIG
 BROKER = bot.util.get_secret("BROKER", "config/.env")
 FILTER = "FILLED"
@@ -24,7 +23,6 @@ WEBHOOK_EXTENSION = bot.util.get_secret("WEBHOOK_EXTENSION", "config/.env")
 DISCORD_CHANNEL_ID = bot.util.get_secret("DISCORD_CHANNEL_ID", "config/.env")
 MESSAGE_TEMPLATE_OPENING = bot.util.get_secret("MESSAGE_TEMPLATE_OPENING", "config/.env")
 MESSAGE_TEMPLATE_CLOSING = bot.util.get_secret("MESSAGE_TEMPLATE_CLOSING", "config/.env")
-
 
 #DATABASE CONFIG
 DATABASE_PATH = bot.util.get_secret("DATABASE_PATH", "config/.env")
@@ -39,8 +37,6 @@ HOUR_OF_DAY = int(bot.util.get_secret("HOUR_OF_DAY", "config/.env", 16))
 
 #DEBUG CONFIG
 DROP_TABLES = bool(bot.util.get_secret("DROP_TABLES", "config/.env"))
-
-
 
 
 def loop(client, sql, interval=LOOP_FREQUENCY):
@@ -129,13 +125,12 @@ def loop_work(client, sql):
     try:
         logging.debug(f"Passed client: {client} and sql: {sql}")
         # Fetch orders from Schwab
-        response = client.get_account_positions(FILTER, TIME_DELTA)
-        orders = [bot.sort_schwab_data_dynamically(bot.get_keys(), position) for position in response]
+        orders = get_data(client)
 
-        logging.debug(f"Orders fetched: {len(orders)}")
+        orders = process_data(orders)
 
-        #check each order if there is multiple legs in the order and split them up
-        # orders = bot.split_orders(orders)
+        orders = format_orders(orders)
+        logging.debug(f"Orders processed: {len(orders)}")
 
         # Fetch existing execution times from the database
         existing_order_rows = sql.get_data("SELECT executionTime FROM orders")
@@ -266,6 +261,38 @@ def main():
     loop(client, sql)
     
 
+def get_data(client):
+    response = client.get_account_positions(FILTER, TIME_DELTA)
+
+    orders = [bot.sort_schwab_data_dynamically(bot.get_keys(), position) for position in response]
+
+    logging.debug(f"Orders fetched: {len(orders)}")
+    return orders
+
+def process_data(orders):
+    #check each order if there is multiple legs in the order and split them up
+        #add this to the order processing above
+    for order in orders:
+        if order['complexOrderStrategyType'] != 'NONE':
+            #save the split orders returned
+            split_orders = bot.schwab.split_complex_order_strategy(order)
+
+            #check if split orders were returned
+            if not split_orders:
+                continue
+            #replace the original order with the split orders
+            orders.remove(order)
+            orders.extend(split_orders)
+        else:
+            order = bot.schwab.flatten_data(order)
+
+    return orders
+
+def format_orders(orders):
+    for order in orders:
+        order = bot.schwab.split_description(order)
+
+    return orders
 
 if __name__ == "__main__":
     main()
