@@ -1,3 +1,5 @@
 /config
 /tokens.json
 .env
+*.db
+DB.db
