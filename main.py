@@ -138,12 +138,9 @@ def loop_work(client, sql):
         orders = format_orders(orders)
         logging.debug(f"Orders processed: {len(orders)}")
 
-        # Fetch existing execution times from the database
-        existing_order_rows = sql.get_data("SELECT executionTime FROM orders")
-        existing_order_executionTime = [row[0] for row in existing_order_rows]  # Extract execution times
+        existing_order_execution_times = get_existing_order_execution_times(sql)
+        new_orders = filter_new_orders(orders, existing_order_execution_times)
 
-        # Filter new orders
-        new_orders = [order for order in orders if order.get('executionTime') not in existing_order_executionTime]
         logging.debug(f"New orders: {len(new_orders)}")
 
         if not new_orders:
@@ -169,6 +166,45 @@ def loop_work(client, sql):
     except Exception as e:
         logging.error(f"Error in loop_work: {e}")
         return e
+
+def get_existing_order_execution_times(sql):
+    """Fetch execution times of existing orders from the database."""
+    existing_order_rows = sql.get_all_data("SELECT symbol, description, price, instrumentId FROM orders")
+    return {tuple(row) for row in existing_order_rows}
+ # Use a set for faster lookups
+
+def filter_new_orders(orders, existing_orders):
+    """
+    Filter out orders that already exist in the database by checking all relevant fields.
+    
+    Args:
+        orders (list): A list of orders (dictionaries) to check.
+        existing_orders (set): A set of tuples representing existing orders in the database.
+    
+    Returns:
+        list: A list of new orders that do not exist in the database.
+    """
+    new_orders = []  # Initialize an empty list to store new orders
+
+    for order in orders:
+        # Extract relevant fields from the order
+        order_symbol = order.get('underlyingSymbol')
+        order_description = order.get('description')
+        order_price = order.get('price')
+        order_instrument_id = order.get('instrumentId')
+
+        # Create a tuple representing the current order
+        order_tuple = (order_symbol, order_description, order_price, order_instrument_id)
+
+        # Check if the order exists in the database
+        if order_tuple not in existing_orders:
+            new_orders.append(order)  # Add new order to the list
+    
+    return new_orders  # Return only the new orders
+
+
+
+
 
 def send_to_gsheet(orders, closed_orders):
     try:
