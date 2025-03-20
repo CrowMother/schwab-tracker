@@ -61,13 +61,20 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
         - If `LOOP_TYPE` is "INTERVAL", runs `loop_work` continuously with a sleep interval.
         - Logs errors and loop completion messages.
     """
-
+    
+    last_update = bot.util.get_file_last_modified("./tokens.json")
     # Run loop_work on specified time of the week
     # Timer for running loop_work on a specified time of the week
-    if LOOP_TYPE == "WEEKLY":
-        global ISREPORTGEN
-        while True:
-            
+    while True:
+    #functions for all loop types
+
+        #check if tokens file updated
+        if bot.util.check_file_changed("./tokens.json", last_update):
+            #reboot the service
+            exit(0)
+
+        if LOOP_TYPE == "WEEKLY":
+            global ISREPORTGEN    
             if bot.util.check_time_of_week(DAY_OF_WEEK, HOUR_OF_DAY):
                 if not ISREPORTGEN:
                     logging.info("start to create reports")
@@ -76,10 +83,9 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
             else:
                 ISREPORTGEN = False
             time.sleep(interval)
-    
-    # Run loop_work on specified time of each day
-    elif LOOP_TYPE == "DAILY":
-        while True:
+        
+        # Run loop_work on specified time of each day
+        elif LOOP_TYPE == "DAILY":
             if bot.util.check_time_of_day(HOUR_OF_DAY):
                 if not ISREPORTGEN:
                     logging.info("start to create reports")
@@ -88,23 +94,23 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
             else:
                 ISREPORTGEN = False
             time.sleep(interval)
-        
-    elif LOOP_TYPE == "INTERVAL":
-        # Simple Timer Loop
-        while True:
+            
+        elif LOOP_TYPE == "INTERVAL":
+            # Simple Timer Loop
             error = loop_work(client, sql)
             if error:
                 break
             logging.info(f"Loop iteration completed, sleeping for {interval} seconds")
             time.sleep(interval)
 
-    elif LOOP_TYPE == "DEBUG":
-        error = loop_work(client, sql)
-        if error:
-            logging.error(f"Error occurred in loop_work, ERROR: {error}")
-            return
-    else:
-        raise ValueError("Unknown loop type: {}".format(LOOP_TYPE))
+        elif LOOP_TYPE == "DEBUG":
+            error = loop_work(client, sql)
+            if error:
+                logging.error(f"Error occurred in loop_work, ERROR: {error}")
+            break
+        else:
+            raise ValueError("Unknown loop type: {}".format(LOOP_TYPE))
+    
 
 
 def loop_work(client, sql):
