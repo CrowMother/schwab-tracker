@@ -138,6 +138,8 @@ def loop_work(client, sql):
         orders = format_orders(orders)
         logging.debug(f"Orders processed: {len(orders)}")
 
+        #_________simplify this logic_________
+
         existing_order_execution_times = get_existing_order_execution_times(sql)
         new_orders = filter_new_orders(orders, existing_order_execution_times)
 
@@ -155,6 +157,8 @@ def loop_work(client, sql):
         # Process closing orders
         closed_orders = bot.schwab.process_closing_orders(sql, new_orders)
         logging.info(f"Closed Orders: {len(closed_orders)}")
+
+        #_________simplify this logic_________
 
         #debugging option to send orders to webhook or prevent sending
         if OUTPUT_PATH == "DISCORD":
