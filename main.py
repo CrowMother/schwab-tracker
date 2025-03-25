@@ -2,6 +2,7 @@ import logging
 import requests
 import sqlite3
 import time
+import functions
 
 # Local imports
 import Bot_App as bot
@@ -111,8 +112,6 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
         else:
             raise ValueError("Unknown loop type: {}".format(LOOP_TYPE))
     
-
-
 def loop_work(client, sql):
     """
     Retrieves account positions from the client, processes them, and updates the database.
@@ -135,13 +134,13 @@ def loop_work(client, sql):
 
         orders = process_data(orders)
 
-        orders = format_orders(orders)
+        orders = functions.format_orders(orders)
         logging.debug(f"Orders processed: {len(orders)}")
 
         #_________simplify this logic_________
 
         existing_order_execution_times = get_existing_order_execution_times(sql)
-        new_orders = filter_new_orders(orders, existing_order_execution_times)
+        new_orders = functions.filter_new_orders(orders, existing_order_execution_times)
 
         logging.debug(f"New orders: {len(new_orders)}")
 
@@ -162,10 +161,10 @@ def loop_work(client, sql):
 
         #debugging option to send orders to webhook or prevent sending
         if OUTPUT_PATH == "DISCORD":
-            send_to_discord_webhook(MESSAGE_TEMPLATE_OPENING, new_orders, closed_orders)
+            functions.send_to_discord_webhook(MESSAGE_TEMPLATE_OPENING, new_orders, closed_orders)
             
         elif OUTPUT_PATH == "GSHEET":
-            send_to_gsheet(new_orders, closed_orders)
+            functions.send_to_gsheet(new_orders, closed_orders)
 
     except Exception as e:
         logging.error(f"Error in loop_work: {e}")
@@ -176,112 +175,6 @@ def get_existing_order_execution_times(sql):
     existing_order_rows = sql.get_all_data("SELECT symbol, description, price, instrumentId FROM orders")
     return {tuple(row) for row in existing_order_rows}
  # Use a set for faster lookups
-
-def filter_new_orders(orders, existing_orders):
-    """
-    Filter out orders that already exist in the database by checking all relevant fields.
-    
-    Args:
-        orders (list): A list of orders (dictionaries) to check.
-        existing_orders (set): A set of tuples representing existing orders in the database.
-    
-    Returns:
-        list: A list of new orders that do not exist in the database.
-    """
-    new_orders = []  # Initialize an empty list to store new orders
-
-    for order in orders:
-        # Extract relevant fields from the order
-        order_symbol = order.get('underlyingSymbol')
-        order_description = order.get('description')
-        order_price = order.get('price')
-        order_instrument_id = order.get('instrumentId')
-
-        # Create a tuple representing the current order
-        order_tuple = (order_symbol, order_description, order_price, order_instrument_id)
-
-        # Check if the order exists in the database
-        if order_tuple not in existing_orders:
-            new_orders.append(order)  # Add new order to the list
-    
-    return new_orders  # Return only the new orders
-
-
-
-
-
-def send_to_gsheet(orders, closed_orders):
-    try:
-        #connect to google sheets
-        #look into the following lines of code -------------------------------------------
-        gsheet_client = bot.gsheet.connect_gsheets_account(bot.util.get_secret("GSHEETS_CREDENTIALS", "config/.env"))
-        gsheet = bot.gsheet.connect_to_sheet(gsheet_client, bot.util.get_secret("GSHEETS_SHEET_ID", "config/.env"), bot.util.get_secret("GSHEETS_SHEET_NAME", "config/.env"))
-
-
-        #insert header row
-        bot.gsheet.copy_headers(gsheet, f"A{bot.gsheet.get_next_empty_row(gsheet, 2)}")
-        week = bot.util.get_monday_of_current_week()
-        logging.info(f"week: {week}")
-        bot.gsheet.insert_data(gsheet, f"A{bot.gsheet.get_next_empty_row(gsheet, 2)}", [[week]])
-
-        matching_closing_orders = []
-        # Send the closed order to the GSheet
-        for order in orders:
-                if order['instruction'] in ["SELL_TO_CLOSE", "BUY_TO_CLOSE"]:
-                    # Check if the order is a closing order
-                    matching_closing_orders.append(match_orders(order, closed_orders))
-
-        #IDs of the orders that have already been posted
-        posted_IDs = []
-        # for each closing order add it to the gsheet
-        for closed_order in matching_closing_orders:
-            row_data = bot.gsheet.format_data(closed_order[0])
-
-            #create an ID for the order
-            order_id = bot.gsheet.create_id(closed_order[0])
-            
-            #check if ID has already been posted
-            if order_id not in posted_IDs:
-                posted_IDs.append(order_id)
-                bot.gsheet.write_row_at_next_empty_row(gsheet, row_data)
-            else:
-                logging.debug(f"Order with ID {order_id} already posted, skipping")
-
-    except Exception as e:
-        logging.error(f"Error sending data to google sheets: {str(e)}")
-
-
-def match_orders(order, closed_orders):
-        # Match the closing order with its corresponding closed position
-        matching_closing_orders = [
-            closed_order for closed_order in closed_orders
-            if closed_order['instrumentId'] == order['instrumentId']
-                ]
-        return matching_closing_orders
-
-def send_to_discord_webhook(message, new_orders, closed_orders):
-    # Send orders to webhook
-
-    # -------------look into refactoring this section of code-------------
-    try:
-        for order in new_orders:
-            if order['instruction'] in ["SELL_TO_CLOSE", "BUY_TO_CLOSE"]:
-                # Check if the order is a closing order
-                matching_closing_orders = match_orders(order, closed_orders)
-                # Send the matched closing data to the webhook
-                for closed_order in matching_closing_orders:
-                    message = bot.webhook.format_webhook(closed_order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
-                    bot.webhook.send_to_discord_webhook(message, WEBHOOK_URL)
-            else:
-                # Send new order directly to the webhook
-                message = bot.webhook.format_webhook(order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
-                bot.webhook.send_to_discord_webhook(message, WEBHOOK_URL)
-
-    # ^^^^^^^^^^^^^look into refactoring this section of code^^^^^^^^^^^^^^
-
-    except Exception as e:
-        logging.error(f"Error sending data to discord webhook: {str(e)}")
-
 
 def main():
     # Initialize logging
@@ -305,15 +198,6 @@ def main():
 
     # Start the main loop
     loop(client, sql)
-    
-
-def get_data(client):
-    response = client.get_account_positions(FILTER, TIME_DELTA)
-
-    orders = [bot.sort_schwab_data_dynamically(bot.get_keys(), position) for position in response]
-
-    logging.debug(f"Orders fetched: {len(orders)}")
-    return orders
 
 def process_data(orders):
     #check each order if there is multiple legs in the order and split them up
@@ -334,10 +218,12 @@ def process_data(orders):
 
     return orders
 
-def format_orders(orders):
-    for order in orders:
-        order = bot.schwab.split_description(order)
+def get_data(client):
+    response = client.get_account_positions(FILTER, TIME_DELTA)
 
+    orders = [bot.sort_schwab_data_dynamically(bot.get_keys(), position) for position in response]
+
+    logging.debug(f"Orders fetched: {len(orders)}")
     return orders
 
 if __name__ == "__main__":
