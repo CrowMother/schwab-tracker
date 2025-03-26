@@ -40,7 +40,7 @@ HOUR_OF_DAY = int(bot.util.get_secret("HOUR_OF_DAY", "config/.env", 16))
 DROP_TABLES = bool(bot.util.get_secret("DROP_TABLES", "config/.env"))
 
 
-def loop(client, sql, interval=LOOP_FREQUENCY):
+def check_loop_type(client, sql, interval=LOOP_FREQUENCY):
     """
     Executes a continuous loop to process orders at specified intervals.
 
@@ -66,51 +66,51 @@ def loop(client, sql, interval=LOOP_FREQUENCY):
     last_update = bot.util.get_file_last_modified("./tokens.json")
     # Run loop_work on specified time of the week
     # Timer for running loop_work on a specified time of the week
-    while True:
     #functions for all loop types
 
-        #check if tokens file updated
-        if bot.util.check_file_changed("./tokens.json", last_update):
-            #reboot the service
-            exit(0)
+    #check if tokens file updated
+    if bot.util.check_file_changed("./tokens.json", last_update):
+        #reboot the service
+        exit(0)
 
-        if LOOP_TYPE == "WEEKLY":
-            global ISREPORTGEN    
-            if bot.util.check_time_of_week(DAY_OF_WEEK, HOUR_OF_DAY):
-                if not ISREPORTGEN:
-                    logging.info("start to create reports")
-                    error = loop_work(client, sql)
-                    ISREPORTGEN = True
-            else:
-                ISREPORTGEN = False
-            time.sleep(interval)
-        
-        # Run loop_work on specified time of each day
-        elif LOOP_TYPE == "DAILY":
-            if bot.util.check_time_of_day(HOUR_OF_DAY):
-                if not ISREPORTGEN:
-                    logging.info("start to create reports")
-                    error = loop_work(client, sql)
-                    ISREPORTGEN = True
-            else:
-                ISREPORTGEN = False
-            time.sleep(interval)
-            
-        elif LOOP_TYPE == "INTERVAL":
-            # Simple Timer Loop
-            error = loop_work(client, sql)
-            if error:
-                break
-            logging.info(f"Loop iteration completed, sleeping for {interval} seconds")
-            time.sleep(interval)
-
-        elif LOOP_TYPE == "DEBUG":
-            error = loop_work(client, sql)
-            if error:
-                logging.error(f"Error occurred in loop_work, ERROR: {error}")
-            break
+    if LOOP_TYPE == "WEEKLY":
+        global ISREPORTGEN    
+        if bot.util.check_time_of_week(DAY_OF_WEEK, HOUR_OF_DAY):
+            if not ISREPORTGEN:
+                logging.info("start to create reports")
+                error = loop_work(client, sql)
+                ISREPORTGEN = True
         else:
-            raise ValueError("Unknown loop type: {}".format(LOOP_TYPE))
+            ISREPORTGEN = False
+        time.sleep(interval)
+    
+    # Run loop_work on specified time of each day
+    elif LOOP_TYPE == "DAILY":
+        if bot.util.check_time_of_day(HOUR_OF_DAY):
+            if not ISREPORTGEN:
+                logging.info("start to create reports")
+                error = loop_work(client, sql)
+                ISREPORTGEN = True
+        else:
+            ISREPORTGEN = False
+        time.sleep(interval)
+        
+    elif LOOP_TYPE == "INTERVAL":
+        # Simple Timer Loop
+        error = loop_work(client, sql)
+        if error:
+            return True
+        logging.info(f"Loop iteration completed, sleeping for {interval} seconds")
+        time.sleep(interval)
+
+    elif LOOP_TYPE == "DEBUG":
+        error = loop_work(client, sql)
+        if error:
+            logging.error(f"Error occurred in loop_work, ERROR: {error}")
+        return True
+    else:
+        logging.error("Unknown loop type: {}".format(LOOP_TYPE))
+        return True
     
 def loop_work(client, sql):
     """
@@ -197,7 +197,11 @@ def main():
         return
 
     # Start the main loop
-    loop(client, sql)
+    while True:
+        is_loop_complete = check_loop_type(client, sql)
+
+        if is_loop_complete == True:
+            break
 
 def process_data(orders):
     #check each order if there is multiple legs in the order and split them up
@@ -229,4 +233,51 @@ def get_data(client):
 if __name__ == "__main__":
     main()
 
+# Write out the process of data flow then fill in with code
 
+# start()
+def start():
+    """
+    Initialize the application.
+
+    Initialize the logger and set the log level to INFO.
+    Initialize the database and connect to it.
+    Initialize the Schwab client using the stored API key and secret in the .env file.
+
+    If any of the initialization steps fail, log the error and exit the application.
+    """
+    # Initialize logging
+    logging.basicConfig(level=logging.INFO)
+    
+    try:
+        # Initialize database
+        sql = bot.SQLDatabase(DATABASE_PATH)
+        sql.connect()
+        bot.schwab.initialize_database(sql, DROP_TABLES)
+
+        # Initialize Schwab client
+        client = bot.Schwab_client(
+            bot.util.get_secret("SCHWAB_APP_KEY", "config/.env"),
+            bot.util.get_secret("SCHWAB_APP_SECRET", "config/.env")
+        )
+
+    except Exception as e:
+        logging.error(f"Error in start(): {e}")
+        return
+    
+    while True:
+        is_loop_complete = check_loop_type(client, sql)
+
+        if is_loop_complete == True:
+            break
+
+
+# Start the main loop based on LOOP_TYPE
+
+# loop()
+    # Get orders from Schwab
+    # get the data I need from the orders
+        # save some unique value in database to make sure I am not resending the same data
+    # send the data to the webhook
+
+# end()
