@@ -203,6 +203,29 @@ def main():
         if is_loop_complete == True:
             break
 
+def send_to_discord_webhook(message, new_orders, closed_orders):
+    # Send orders to webhook
+
+    # -------------look into refactoring this section of code-------------
+    try:
+        for order in new_orders:
+            if order['instruction'] in ["SELL_TO_CLOSE", "BUY_TO_CLOSE"]:
+                # Check if the order is a closing order
+                matching_closing_orders = functions.match_orders(order, closed_orders)
+                # Send the matched closing data to the webhook
+                for closed_order in matching_closing_orders:
+                    message = bot.webhook.format_webhook(closed_order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
+                    bot.webhook.send_to_discord_webhook(message, WEBHOOK_URL)
+            else:
+                # Send new order directly to the webhook
+                message = bot.webhook.format_webhook(order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
+                bot.webhook.send_to_discord_webhook(message, WEBHOOK_URL)
+
+    # ^^^^^^^^^^^^^look into refactoring this section of code^^^^^^^^^^^^^^
+
+    except Exception as e:
+        logging.error(f"Error sending data to discord webhook: {str(e)}")
+
 def process_data(orders):
     #check each order if there is multiple legs in the order and split them up
         #add this to the order processing above
