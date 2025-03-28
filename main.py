@@ -131,6 +131,16 @@ def loop_work(client, sql):
         logging.debug(f"Passed client: {client} and sql: {sql}")
         # Fetch orders from Schwab
         orders = get_data(client)
+        
+        #break into legs
+        orderLegs = []
+        for order in orders:
+            order = bot.schwab.extract_and_normailze_legs(order)
+            for leg in order:
+                orderLegs.append(leg)
+
+        orders = orderLegs
+
 
         orders = process_data(orders)
 
@@ -161,7 +171,7 @@ def loop_work(client, sql):
 
         #debugging option to send orders to webhook or prevent sending
         if OUTPUT_PATH == "DISCORD":
-            functions.send_to_discord_webhook(MESSAGE_TEMPLATE_OPENING, new_orders, closed_orders)
+            send_to_discord_webhook(MESSAGE_TEMPLATE_OPENING, new_orders, closed_orders)
             
         elif OUTPUT_PATH == "GSHEET":
             functions.send_to_gsheet(new_orders, closed_orders)
