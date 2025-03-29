@@ -64,7 +64,7 @@ def filter_new_orders(orders, existing_orders):
         # Extract relevant fields from the order
         order_symbol = order.get('underlyingSymbol')
         order_description = order.get('description')
-        order_price = order.get('price')
+        order_price = order.get('orderPrice')
         order_instrument_id = order.get('instrumentId')
 
         # Create a tuple representing the current order
@@ -85,9 +85,22 @@ def match_orders(order, closed_orders):
                 ]
         return matching_closing_orders
 
-def format_orders(orders):
+def format_variables_in_orders(orders):
     for order in orders:
         order = bot.schwab.split_description(order)
 
     return orders
 
+def break_into_legs(orders):
+    #break into legs
+    try:
+        orderLegs = []
+        for order in orders:
+            order = bot.schwab.extract_and_normailze_legs(order)
+            for leg in order:
+                orderLegs.append(leg)
+
+        return orderLegs
+
+    except Exception as e:
+        logging.error(f"Error breaking into legs: {e}")

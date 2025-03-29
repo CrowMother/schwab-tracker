@@ -132,20 +132,12 @@ def loop_work(client, sql):
         # Fetch orders from Schwab
         orders = get_data(client)
         
-        #break into legs
-        orderLegs = []
-        for order in orders:
-            order = bot.schwab.extract_and_normailze_legs(order)
-            for leg in order:
-                orderLegs.append(leg)
+        orders = functions.break_into_legs(orders)
+        
+        #orders = process_data(orders)
 
-        orders = orderLegs
-
-
-        orders = process_data(orders)
-
-        orders = functions.format_orders(orders)
-        logging.debug(f"Orders processed: {len(orders)}")
+        orders = functions.format_variables_in_orders(orders)
+        logging.debug(f"Legs processed: {len(orders)}")
 
         #_________simplify this logic_________
 
