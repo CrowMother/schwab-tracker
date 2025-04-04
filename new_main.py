@@ -109,25 +109,50 @@ def get_unposted_orders(db_path="orders.db"):
 
     return orders
 
+def get_open_close_symbol(position_effect):
+    if position_effect == "OPENING":
+        return f"{position_effect} 🟢"
+    elif position_effect == "CLOSING":
+        return f"{position_effect} 🔴"
+    else:
+        return f"{position_effect} 🟡"
+
 def format_discord_message(order):
+    """
+    Format a Schwab order dictionary into a string suitable for posting to Discord.
+
+    :param order: A dictionary of a Schwab order
+    :return: A string representation of the order
+    """
     legs = order.get("orderLegCollection", [])
     price = order.get("price", "?")
     position_effects = []
     leg_lines = []
 
     for leg in legs:
-        instrument = leg.get("instrument", {})
         instruction = leg.get("instruction", "UNKNOWN")
-        qty = leg.get("quantity", 0)
-        symbol = instrument.get("symbol", "???")
-        description = instrument.get("description", "")
         position_effect = leg.get("positionEffect", "")
+        position_effect = get_open_close_symbol(position_effect)
+        instrument = leg.get("instrument", {})
+        symbol = instrument.get("symbol", "???").split(" ")[0]
+        description = instrument.get("description", "")
+        # Extract important parts of the option description
+        # date is the first part of the description
+        # strike is the second part
+        # put or call is the fourth part
+        date = bot.data.parse_option_description(description, 2)
+        strike = bot.data.parse_option_description(description, 3)
+        put_call = bot.data.parse_option_description(description, 4)
 
-        leg_lines.append(f"**{instruction}** {qty}x `{symbol}`")
-        leg_lines.append(f"> {description}")
+        # Build a string for each leg with the instruction and symbol
+        leg_lines.append(f"**{instruction}** ")
+        # Add the symbol and strike price
+        leg_lines.append(f"> **{symbol}** {date} ${strike} {put_call}")
         position_effects.append(position_effect)
 
+    # Collapse the position effects into a single string
     effect_summary = ', '.join(set(position_effects)) or "UNKNOWN"
+    # Join all the lines of the leg strings into a single string
     body = "\n".join(leg_lines)
 
     return f"{body}\n@ ${price} *{effect_summary}*"
