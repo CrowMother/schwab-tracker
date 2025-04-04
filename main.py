@@ -130,43 +130,49 @@ def loop_work(client, sql):
     try:
         logging.debug(f"Passed client: {client} and sql: {sql}")
         # Fetch orders from Schwab
-        orders = get_data(client)
+        data_to_sql(client)
+        print(f"data successfully sent to sql database")
+        # create sql connection to the database
+
+
+
+        # orders = bot.schwab.get_account_positions(client, FILTER, TIME_DELTA)
+
+        # orders = functions.break_into_legs(orders)
         
-        orders = functions.break_into_legs(orders)
+        # #orders = process_data(orders)
+
+        # orders = functions.format_variables_in_orders(orders)
+        # logging.debug(f"Legs processed: {len(orders)}")
+
+        # #_________simplify this logic_________
+
+        # existing_order_execution_times = get_existing_order_execution_times(sql)
+        # new_orders = functions.filter_new_orders(orders, existing_order_execution_times)
+
+        # logging.debug(f"New orders: {len(new_orders)}")
+
+        # if not new_orders:
+        #     return None
         
-        #orders = process_data(orders)
+        # # Save new orders to the database
+        # bot.schwab.save_orders_to_db(sql, new_orders)
 
-        orders = functions.format_variables_in_orders(orders)
-        logging.debug(f"Legs processed: {len(orders)}")
+        # # Populate open positions
+        # bot.schwab.populate_open_positions(sql, new_orders)
 
-        #_________simplify this logic_________
+        # # Process closing orders
+        # closed_orders = bot.schwab.process_closing_orders(sql, new_orders)
+        # logging.info(f"Closed Orders: {len(closed_orders)}")
 
-        existing_order_execution_times = get_existing_order_execution_times(sql)
-        new_orders = functions.filter_new_orders(orders, existing_order_execution_times)
+        # #_________simplify this logic_________
 
-        logging.debug(f"New orders: {len(new_orders)}")
-
-        if not new_orders:
-            return None
-        
-        # Save new orders to the database
-        bot.schwab.save_orders_to_db(sql, new_orders)
-
-        # Populate open positions
-        bot.schwab.populate_open_positions(sql, new_orders)
-
-        # Process closing orders
-        closed_orders = bot.schwab.process_closing_orders(sql, new_orders)
-        logging.info(f"Closed Orders: {len(closed_orders)}")
-
-        #_________simplify this logic_________
-
-        #debugging option to send orders to webhook or prevent sending
-        if OUTPUT_PATH == "DISCORD":
-            send_to_discord_webhook(MESSAGE_TEMPLATE_OPENING, new_orders, closed_orders)
+        # #debugging option to send orders to webhook or prevent sending
+        # if OUTPUT_PATH == "DISCORD":
+        #     send_to_discord_webhook(MESSAGE_TEMPLATE_OPENING, new_orders, closed_orders)
             
-        elif OUTPUT_PATH == "GSHEET":
-            functions.send_to_gsheet(new_orders, closed_orders)
+        # elif OUTPUT_PATH == "GSHEET":
+        #     functions.send_to_gsheet(new_orders, closed_orders)
 
     except Exception as e:
         logging.error(f"Error in loop_work: {e}")
@@ -218,6 +224,10 @@ def send_to_discord_webhook(message, new_orders, closed_orders):
                 for closed_order in matching_closing_orders:
                     message = bot.webhook.format_webhook(closed_order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
                     bot.webhook.send_to_discord_webhook(message, WEBHOOK_URL)
+                if not matching_closing_orders:
+                    logging.debug(f"No matching closing orders found for {order['description']}")
+                    message = bot.webhook.format_webhook(closed_order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
+                    bot.webhook.send_to_discord_webhook(message, WEBHOOK_URL)
             else:
                 # Send new order directly to the webhook
                 message = bot.webhook.format_webhook(order, DISCORD_CHANNEL_ID, MESSAGE_TEMPLATE_OPENING, MESSAGE_TEMPLATE_CLOSING)
@@ -247,13 +257,14 @@ def process_data(orders):
 
     return orders
 
-def get_data(client):
+def  data_to_sql(client):
     response = client.get_account_positions(FILTER, TIME_DELTA)
 
-    orders = [bot.sort_schwab_data_dynamically(bot.get_keys(), position) for position in response]
+    bot.SQL.raw_data_to_sql(response)
+    # orders = [bot.sort_schwab_data_dynamically(bot.get_keys(), position) for position in response]
 
-    logging.debug(f"Orders fetched: {len(orders)}")
-    return orders
+    # logging.debug(f"Orders fetched: {len(orders)}")
+    # return orders
 
 if __name__ == "__main__":
     main()
