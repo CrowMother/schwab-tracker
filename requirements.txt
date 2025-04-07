@@ -4,5 +4,3 @@ gspread
 google
 pandas
 schwabdev
-hashlib
-json
