@@ -1,7 +1,6 @@
 import sqlite3
 import json
 import hashlib
-import requests
 from datetime import datetime
 import time
 # Local imports
