@@ -1,54 +1,82 @@
-# Schwab Tracker
+# Schwab Order to Discord Notifier
 
-## Overview
-This application tracks Schwab account positions and processes them using a structured workflow. It leverages `main.py` for order processing, database management, and webhook notifications.
+This Python application creates a semi-real-time pipeline that fetches Charles Schwab order data using a third-party API and posts new trade events to a Discord channel via webhook.
 
-## Dependencies
-- Python 3.8 or higher  
-- `Bot_App` library (assumed installed)  
-- `requests` library  
-- `logging` module  
+## Features
 
-## Components
+- Stores all Schwab orders in a local SQLite database
 
-### Main Processing (`main.py`)
-Handles the core logic of fetching Schwab account positions, managing orders, and interacting with the database.
+- Deduplicates orders using a unique hash (based on entry time, instruction, and symbol)
 
-### Database Operations
-Manages connections to a SQLite database for storing order history and tracking open positions.
+- Formats Discord messages dynamically, including multi-leg orders
 
-## Workflow
+- Calculates percentage gain/loss on closing trades by referencing previous opening orders
 
-1. **Initialization**  
-   - Sets up logging.  
-   - Initializes database connection.  
-   - Creates tables if they don’t exist.  
+- Detects and labels:
 
-2. **Schwab Client Setup**  
-   - Uses environment variables for authentication credentials.  
-   - Connects to Schwab API to fetch account positions.  
+   - New position (Opening 🟢)
 
-3. **Data Processing**  
-   - Fetches account positions filtered by "FILLED".  
-   - Converts raw data into structured order dictionaries.  
-   - Filters out duplicate orders already stored in the database.  
+  - Full closes (Closing 🔴)
 
-4. **Database Operations**  
-   - Stores new orders in the `orders` table.  
-   - Maintains the `open_positions` table for tracking active trades.  
-   - Processes closing orders and matches them with corresponding open positions.  
+  - Partial closes (Partially Closing 🟠)
 
-5. **Webhook Notifications**  
-   - Sends structured messages to a webhook (e.g., Discord) when new or closed orders are processed.  
+  - Position sizing up (Scaling Up 🟢)
 
-6. **Loop Execution**  
-   - Runs at defined intervals (`LOOP_FREQUENCY`) to continuously fetch and process orders.  
+## How It Works
 
-## Configuration
-- Uses environment variables stored in `config/.env` for sensitive information such as API keys and webhook URLs.  
+- Fetches all orders from Schwab within the last N hours
 
-## Running Terminals
-None  
+- Stores new orders into the database
 
-## Connected MCP Servers
-None currently connected  
+- Checks which orders haven't been posted to Discord
+
+- Formats and sends a message to a Discord webhook
+
+- Marks orders as posted to prevent duplicates
+
+## File Overview
+
+- schwab_pipeline_post_discord.py — Main processing logic: data retrieval, formatting, and posting
+
+- orders.db — SQLite database storing all order metadata and raw JSON
+
+## Setup Instructions
+
+1. Requirements
+
+- Python 3.8+
+
+- Packages:
+
+- requests
+
+- Install via pip:
+``` bash
+pip install requests
+```
+2. Configure Discord Webhook
+
+- Update the following line in the code with your actual webhook:
+
+- DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID"
+
+3. Run the Script
+
+- You can run the main function manually or via a scheduler like cron:
+
+- python schwab_pipeline_post_discord.py
+
+## Customization
+
+- You can customize the Discord message format in the format_discord_message function.
+
+- The database logic assumes the Schwab API returns a consistent JSON structure.
+
+## License
+
+- MIT
+
+## Credits
+
+Created by DevNest.
+
