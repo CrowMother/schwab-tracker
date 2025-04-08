@@ -6,6 +6,7 @@ import time
 # Local imports
 import Bot_App as bot
 
+# partial open/close orders updated
 FILTER = "FILLED"
 TIME_DELTA=24
 

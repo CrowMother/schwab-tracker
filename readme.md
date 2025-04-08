@@ -1,108 +1,81 @@
+# Schwab Order to Discord Notifier
 
-# Schwab Tracker
-
-A Python application designed to monitor and manage Charles Schwab account positions, facilitating order processing and providing webhook notifications.
+This Python application creates a semi-real-time pipeline that fetches Charles Schwab order data using a third-party API and posts new trade events to a Discord channel via webhook.
 
 ## Features
 
-- **Order Processing**: Automates the execution of buy and sell orders based on predefined criteria.
-- **Database Management**: Utilizes SQLite to store order history and track open positions.
-- **Webhook Notifications**: Sends real-time updates on order statuses and account changes.
+- Stores all Schwab orders in a local SQLite database
 
-## Requirements
+- Deduplicates orders using a unique hash (based on entry time, instruction, and symbol)
 
-- Python 3.8 or higher
-- `requests` library
-- `logging` module
-- `Bot_App` library (ensure this is installed or accessible)
+- Formats Discord messages dynamically, including multi-leg orders
 
-## Installation
+- Calculates percentage gain/loss on closing trades by referencing previous opening orders
 
-1. **Clone the Repository**:
+- Detects and labels:
 
-   ```bash
-   git clone https://github.com/CrowMother/schwab-tracker.git
-   ```
+   - New position (Opening 🟢)
 
+  - Full closes (Closing 🔴)
 
-2. **Navigate to the Project Directory**:
+  - Partial closes (Partially Closing 🟠)
 
-   ```bash
-   cd schwab-tracker
-   ```
+  - Position sizing up (Scaling Up 🟢)
 
+## How It Works
 
-3. **Install Dependencies**:
+- Fetches all orders from Schwab within the last N hours
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+- Stores new orders into the database
 
+- Checks which orders haven't been posted to Discord
 
-## Configuration
+- Formats and sends a message to a Discord webhook
 
-1. **Environment Variables**:
+- Marks orders as posted to prevent duplicates
 
-   Set the following environment variables for Schwab API authentication:
+## File Overview
 
-   - `SCHWAB_USERNAME`
-   - `SCHWAB_PASSWORD`
-   - `SCHWAB_TOTP_SECRET`
+- schwab_pipeline_post_discord.py — Main processing logic: data retrieval, formatting, and posting
 
-   These can be set in a `.env` file or directly in your environment.
+- orders.db — SQLite database storing all order metadata and raw JSON
 
-2. **Database Setup**:
+## Setup Instructions
 
-   The application uses an SQLite database (`DB.db`) to store order history and track positions. Ensure this file is accessible and has the appropriate read/write permissions.
+1. Requirements
 
-## Usage
+- Python 3.8+
 
-1. **Run the Application**:
+- Packages:
 
-   ```bash
-   python main.py
-   ```
+- requests
 
+- Install via pip:
+``` bash
+pip install requests
+```
+2. Configure Discord Webhook
 
-   This will initiate the process of fetching account positions, processing orders, and sending webhook notifications as configured.
+- Update the following line in the code with your actual webhook:
 
-2. **Logging**:
+- DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID"
 
-   Logs are generated to provide insights into the application's operations. Ensure that the logging configuration in `main.py` is set up according to your preferences.
+3. Run the Script
 
-## Docker Deployment
+- You can run the main function manually or via a scheduler like cron:
 
-1. **Build the Docker Image**:
+- python schwab_pipeline_post_discord.py
 
-   ```bash
-   docker build -t schwab-tracker .
-   ```
+## Customization
 
+- You can customize the Discord message format in the format_discord_message function.
 
-2. **Run the Docker Container**:
-
-   ```bash
-   docker run -d --name schwab-tracker schwab-tracker
-   ```
-
-
-   Ensure that environment variables are passed correctly and that the database file is mounted appropriately if you need persistent storage.
-
-## Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch (`feature-branch`).
-3. Commit your changes.
-4. Push to the branch.
-5. Open a Pull Request.
+- The database logic assumes the Schwab API returns a consistent JSON structure.
 
 ## License
 
-Reach out to the developer for more information.
+- MIT
 
-## Contact
+## Credits
 
-For questions or suggestions, please open an issue in this repository.
-``` 
+Created by DevNest.
