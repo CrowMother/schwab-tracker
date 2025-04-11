@@ -6,7 +6,7 @@ import time
 # Local imports
 import Bot_App as bot
 
-# new replacement docker image
+
 
 # partial open/close orders updated
 FILTER = "FILLED"
