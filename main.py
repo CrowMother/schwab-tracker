@@ -61,7 +61,7 @@ def generate_order_id(order):
 def store_orders(orders, db_path="orders.db"):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-
+# make this more generic and lass hardcoded so it can be used for parsing open orders
     for order in orders:
         # Default values
         instruction = None
@@ -75,6 +75,7 @@ def store_orders(orders, db_path="orders.db"):
             position_effect = first_leg.get('positionEffect', None)
             instrument = first_leg.get('instrument', {})
             symbol = instrument.get('symbol', None)
+            description = instrument.get('description', None)
 
         order_id = generate_order_id(order)
         full_json = json.dumps(order)
@@ -83,8 +84,8 @@ def store_orders(orders, db_path="orders.db"):
             cursor.execute("""
                 INSERT INTO schwab_orders (
                     id, entered_time, ticker, instruction, position_effect, 
-                    order_status, quantity, tag, full_json, posted_to_discord, posted_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    order_status, quantity, tag, full_json, posted_to_discord, posted_at, description
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 order_id,
                 order.get('enteredTime'),
@@ -96,7 +97,8 @@ def store_orders(orders, db_path="orders.db"):
                 order.get('tag'),
                 full_json,
                 0,  # posted_to_discord default
-                None  # posted_at default
+                None,  # posted_at default
+                description
             ))
         except sqlite3.IntegrityError:
             pass  # Order already exists

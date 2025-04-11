@@ -3,3 +3,4 @@
 .env
 *.db
 DB.db
+docker-compose.yml
