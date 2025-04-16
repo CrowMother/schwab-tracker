@@ -24,7 +24,7 @@ jobs:
         run: |
           latest_version=$(git tag --sort=-v:refname | head -n 1 | tr -d '[:space:]')
           if [[ -z "$latest_version" ]]; then
-            latest_version="2.2.3"
+            latest_version="2.2.5"
           fi
           IFS='.' read -r major minor patch <<< "$latest_version"
           new_patch=$((patch + 1))

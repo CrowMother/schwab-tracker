@@ -3,6 +3,8 @@ import json
 import hashlib
 from datetime import datetime
 import time
+import requests
+import logging
 # Local imports
 import Bot_App as bot
 
@@ -24,25 +26,31 @@ def main():
     #initialize database
     bot.SQL.initialize_db("orders.db")
     print("Database initialized")
-    while True:
-        # Get orders from Schwab API
-        schwab_orders = client.get_account_positions(FILTER, TIME_DELTA)
+    try:
+        while True:
+            # Get orders from Schwab API
+            schwab_orders = client.get_account_positions(FILTER, TIME_DELTA)
 
-        # store orders in database
-        store_orders(schwab_orders)
-        # print("Orders stored in database")
+            # store orders in database
+            store_orders(schwab_orders)
+            # print("Orders stored in database")
 
-        # get unposted orders from database
-        orders = get_unposted_orders()
+            # get unposted orders from database
+            orders = get_unposted_orders()
 
-        # Send unposted orders to Discord
-        for order_id, raw_json in orders:
-            order = json.loads(raw_json)
-            if bot.webhook.post_to_discord(order, bot.util.get_secret("WEBHOOK_URL", "config/.env"), bot.util.get_secret("DISCORD_CHANNEL_ID", "config/.env"), bot.util.get_secret("SUFFIX", "config/.env")):
-                mark_as_posted(order_id)
-                print(f"Posted order {order_id} to Discord")
-        # Sleep for 5 seconds before checking again
-        time.sleep(5)
+            # Send unposted orders to Discord
+            for order_id, raw_json in orders:
+                order = json.loads(raw_json)
+                if bot.webhook.post_to_discord(order, bot.util.get_secret("WEBHOOK_URL", "config/.env"), bot.util.get_secret("DISCORD_CHANNEL_ID", "config/.env"), bot.util.get_secret("SUFFIX", "config/.env")):
+                    mark_as_posted(order_id)
+                    print(f"Posted order {order_id} to Discord")
+            # Sleep for 5 seconds before checking again
+            time.sleep(5)
+
+    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as e:
+        logging.error(f"Fatal connection error occurred: {e}. Exiting loop.")
+    except KeyboardInterrupt:
+        print("Exiting program.")
 
 
 def generate_order_id(order):
