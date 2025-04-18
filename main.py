@@ -14,7 +14,7 @@ from Bot_App import webhook, util, data
 FILTER = "FILLED"
 TIME_DELTA=24
 #initialize logging
-logger = util.setup_logging(level=logging.INFO, name=__name__)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main():
     print("Initializing Schwab Tracker...")
