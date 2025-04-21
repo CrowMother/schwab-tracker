@@ -4,4 +4,3 @@ gspread
 google
 pandas
 schwabdev
-logging
