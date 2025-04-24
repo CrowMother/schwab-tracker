@@ -6,6 +6,7 @@ import requests
 import logging
 # Local imports
 import Bot_App as bot
+from Bot_App import util, webhook, data
 
 
 
@@ -25,7 +26,8 @@ def main():
     print("Schwab client initialized")
     
     #initialize database
-    bot.SQL.initialize_db("orders.db")
+    drop_tables = util.str_to_bool(util.get_secret("DROP_TABLES", "config/.env", False))
+    bot.SQL.initialize_db("orders.db", drop_tables)
     print("Database initialized")
     try:
         while True:
