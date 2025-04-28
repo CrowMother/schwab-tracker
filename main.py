@@ -12,7 +12,7 @@ from Bot_App import util, webhook, data
 
 # partial open/close orders updated
 FILTER = "FILLED"
-TIME_DELTA=24
+TIME_DELTA=int(util.get_secret("TIME_DELTA", "config/.env", 24))
 #initialize logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
