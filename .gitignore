@@ -4,3 +4,4 @@
 *.db
 DB.db
 docker-compose.yml
+.venv
