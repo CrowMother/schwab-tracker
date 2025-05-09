@@ -1,0 +1,5 @@
+{
+  "python.analysis.extraPaths": [
+    "/home/asa/code/nbt/Bot_framework"
+  ]
+}

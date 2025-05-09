@@ -3,6 +3,10 @@ FROM python:3.11-slim
 # Set the timezone environment variable (adjust to your desired timezone)
 ENV TZ=America/New_York
 
+# VENV compatability
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
 # Install tzdata and set the timezone
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
