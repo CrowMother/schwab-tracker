@@ -5,3 +5,4 @@
 DB.db
 docker-compose.yml
 .venv
+*.pyc
