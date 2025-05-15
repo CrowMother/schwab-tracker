@@ -37,7 +37,7 @@ def main():
             # Fetch orders from Schwab
             schwab_orders = client.get_account_positions(
                 status_filter="FILLED",
-                hours=int(get_secret("TIME_DELTA", "config/.env", 24))
+                hours= TIME_DELTA
             )
 
             # Store and process orders
