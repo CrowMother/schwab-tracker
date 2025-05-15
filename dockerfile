@@ -21,12 +21,11 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends git && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Copy files
 COPY requirements.txt .
+
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
-# Install bot framework in editable mode
-RUN pip install -e ./Bot_App
 
 
 # Set working directory

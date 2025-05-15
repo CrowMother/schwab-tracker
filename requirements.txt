@@ -3,4 +3,7 @@ gspread
 google
 pandas
 schwabdev
--e /home/asa/code/nbt/Bot_framework/
+# Local editable version
+# -e /home/asa/code/nbt/Bot_framework/
+# Github @refactor branch
+-e git+https://github.com/CrowMother/Bot_framework.git@refactor#egg=Bot_App
