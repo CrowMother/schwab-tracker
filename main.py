@@ -17,7 +17,7 @@ TIME_DELTA=int(util.get_secret("TIME_DELTA", "config/.env", 24))
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main():
-    print("Initializing Schwab Tracker...")
+    print("Initializing Schwab Tracker... to fuck off")
     #create schwab client
     client = bot.Schwab_client(
                 bot.util.get_secret("SCHWAB_APP_KEY", "config/.env"),
