@@ -1,0 +1,3 @@
+[submodule "external/bot_framework"]
+	path = external/bot_framework
+	url = https://github.com/CrowMother/Bot_framework
