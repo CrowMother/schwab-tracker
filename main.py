@@ -1,60 +1,70 @@
-# File: main.py
-import json
-from datetime import datetime
-import time
-import requests
-import logging
-# Local imports
-import Bot_App as bot
-from Bot_App import util, webhook, data
+# app.py  (streamlit run app.py)
+import os, json, secrets, urllib.parse, requests, pkce, streamlit as st
 
+APP_KEY     = os.environ.get("SCHWAB_APP_KEY",    "1OfbUtLXOc8AD3yT4445g69TaEBluw3Z")
+APP_SECRET  = os.environ.get("SCHWAB_APP_SECRET", "wGotKFxzabxR4ZWX")
+REDIRECT    = os.environ.get("PUBLIC_REDIRECT",   "https://172.0.0.1")
 
+AUTH_URL  = "https://api.schwabapi.com/v1/oauth/authorize"
+TOKEN_URL = "https://api.schwabapi.com/v1/oauth/token"
 
-# partial open/close orders updated
-FILTER = "FILLED"
-TIME_DELTA=int(util.get_secret("TIME_DELTA", "config/.env", 24))
-#initialize logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+st.set_page_config(page_title="Schwab Link", page_icon="🔗")
 
-def main():
-    print("Initializing Schwab Tracker... to fuck off")
-    #create schwab client
-    client = bot.Schwab_client(
-                bot.util.get_secret("SCHWAB_APP_KEY", "config/.env"),
-                bot.util.get_secret("SCHWAB_APP_SECRET", "config/.env")
-            )
-    print("Schwab client initialized")
-    
-    #initialize database
-    drop_tables = util.str_to_bool(util.get_secret("DROP_TABLES", "config/.env", False))
-    bot.SQL.initialize_db("orders.db", drop_tables)
-    print("Database initialized")
+# --- 1) detect callback ---
+code  = st.query_params.get("code")
+state = st.query_params.get("state")
+
+# init session storage
+if "oauth_state" not in st.session_state:
+    st.session_state.oauth_state = None
+if "code_verifier" not in st.session_state:
+    st.session_state.code_verifier = None
+
+st.title("🔗 Link Schwab")
+
+if code and state:
+    # --- 2) validate state & exchange code for tokens ---
+    if state != st.session_state.oauth_state or not st.session_state.code_verifier:
+        st.error("State mismatch or session expired. Start again.")
+    else:
+        data = {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": REDIRECT,
+            "code_verifier": st.session_state.code_verifier,
+            "client_id": APP_KEY,  # many OAuth servers want this in the body too
+        }
+        # Basic auth with app key/secret is required by Schwab's token endpoint
+        resp = requests.post(TOKEN_URL, data=data, auth=(APP_KEY, APP_SECRET), timeout=30)
+        if resp.ok:
+            tokens = resp.json()
+            with open("tokens.json", "w") as f:
+                json.dump(tokens, f, indent=2)
+            st.success("Linked! tokens.json written.")
+        else:
+            st.error(f"Token exchange failed: {resp.status_code} {resp.text}")
+
+    # clear query params so refreshes don’t redo the exchange
     try:
-        while True:
-            # Get orders from Schwab API
-            schwab_orders = client.get_account_positions(FILTER, TIME_DELTA)
+        st.query_params.clear()
+    except Exception:
+        st.experimental_set_query_params()
+else:
+    # --- 3) start flow: create PKCE + state, build URL, send user to Schwab ---
+    if st.button("Link Schwab"):
+        code_verifier, code_challenge = pkce.generate_pkce_pair()
+        st.session_state.code_verifier = code_verifier
+        st.session_state.oauth_state = secrets.token_urlsafe(16)
 
-            # store orders in database
-            bot.data.store_orders(schwab_orders)
-            # print("Orders stored in database")
+        params = {
+            "response_type": "code",
+            "client_id": APP_KEY,
+            "redirect_uri": REDIRECT,
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
+            "state": st.session_state.oauth_state,
+        }
+        url = AUTH_URL + "?" + urllib.parse.urlencode(params, safe=":/")
+        st.link_button("Continue to Schwab", url)
 
-            # get unposted orders from database
-            orders = bot.data.get_unposted_orders()
-
-            # Send unposted orders to Discord
-            for order_id, raw_json in orders:
-                order = json.loads(raw_json)
-                if bot.webhook.post_to_discord(order, bot.util.get_secret("WEBHOOK_URL", "config/.env"), bot.util.get_secret("DISCORD_CHANNEL_ID", "config/.env"), bot.util.get_secret("SUFFIX", "config/.env")):
-                    bot.data.mark_as_posted(order_id)
-                    print(f"Posted order {order_id} to Discord")
-            # Sleep for 5 seconds before checking again
-            time.sleep(5)
-
-    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as e:
-        logging.error(f"Fatal connection error occurred: {e}. Exiting loop.")
-    except KeyboardInterrupt:
-        print("Exiting program.")
-
-
-if __name__ == "__main__":
-    main()
+    st.info(f"Callback URL registered with Schwab must be exactly:\n{REDIRECT}")
