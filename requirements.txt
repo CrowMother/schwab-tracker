@@ -3,4 +3,4 @@ requests
 gspread
 google
 pandas
-schwabdev
+schwabdev==2.5.1
